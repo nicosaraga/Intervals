@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Circle of Fifths — Major Keys Quiz</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a22;
+    --surface2: #22222e;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0eee8;
+    --muted: #888;
+    --sharp-col: #e86f9a;
+    --sharp-dark: #c4497a;
+    --flat-col: #5ba3e8;
+    --flat-dark: #3478c4;
+    --neutral: #666;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Georgia', 'Times New Roman', serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+  }
+
+  h1 {
+    font-size: clamp(14px, 3vw, 16px);
+    font-weight: normal;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ── Circle ── */
+  #circle-wrap {
+    width: min(320px, 86vw);
+    height: min(320px, 86vw);
+    position: relative;
+  }
+
+  svg#cof {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .seg { cursor: default; transition: opacity .2s; }
+  .key-label {
+    font-family: 'Georgia', serif;
+    font-size: 13px;
+    pointer-events: none;
+    transition: fill .2s;
+    user-select: none;
+  }
+
+  /* ── Main buttons ── */
+  .btns-main {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .btn {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    padding: 9px 22px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  .btn:hover { background: var(--surface2); border-color: rgba(255,255,255,0.18); }
+  .btn:active { transform: scale(.97); }
+  .btn.sharp { border-color: var(--sharp-col); color: var(--sharp-col); }
+  .btn.sharp:hover { background: rgba(232,111,154,0.12); }
+  .btn.flat  { border-color: var(--flat-col);  color: var(--flat-col);  }
+  .btn.flat:hover  { background: rgba(91,163,232,0.12);  }
+  .btn.rnd   { border-color: #a08060; color: #c8a878; }
+  .btn.rnd:hover { background: rgba(160,128,96,0.12); }
+
+  /* ── Quiz panel ── */
+  #quiz {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    animation: fadeIn .3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+
+  #key-label {
+    font-size: clamp(24px, 6vw, 32px);
+    font-weight: normal;
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+
+  #mode-label {
+    font-size: 14px;
+    color: var(--muted);
+    font-family: system-ui, sans-serif;
+    letter-spacing: 0.03em;
+    text-align: center;
+  }
+
+  #note-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .note-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-family: 'Georgia', serif;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .1s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .note-btn:hover { background: var(--surface2); border-color: rgba(255,255,255,0.2); }
+  .note-btn:active { transform: scale(.95); }
+  .note-btn.selected.sharp-mode { background: var(--sharp-col); border-color: var(--sharp-col); color: #fff; }
+  .note-btn.selected.flat-mode  { background: var(--flat-col);  border-color: var(--flat-col);  color: #fff; }
+
+  #done-btn {
+    padding: 10px 32px;
+    font-size: 15px;
+    border-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background .15s, transform .1s;
+  }
+  #done-btn:hover { background: rgba(255,255,255,0.1); }
+  #done-btn:active { transform: scale(.97); }
+
+  /* ── Result ── */
+  #result {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    animation: fadeIn .3s ease;
+  }
+
+  #verdict {
+    font-size: 20px;
+    font-weight: normal;
+    letter-spacing: 0.06em;
+  }
+  #verdict.correct { color: #6ec87a; }
+  #verdict.wrong   { color: #e87070; }
+
+  #scale-display {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .sn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'Georgia', serif;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+  }
+  .sn.altered.sharp { background: rgba(232,111,154,0.2); border-color: var(--sharp-col); color: var(--sharp-col); }
+  .sn.altered.flat  { background: rgba(91,163,232,0.2);  border-color: var(--flat-col);  color: var(--flat-col);  }
+
+  #try-btn {
+    padding: 9px 28px;
+    font-size: 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Georgia', serif;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background .15s, color .15s;
+  }
+  #try-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* landscape compact */
+  @media (orientation: landscape) and (max-height: 500px) {
+    body { align-items: flex-start; padding: 0.5rem; }
+    #app { flex-direction: row; flex-wrap: wrap; max-width: 100%; gap: 0.8rem; align-items: flex-start; }
+    #circle-wrap { width: min(220px, 42vw); height: min(220px, 42vw); flex-shrink: 0; }
+    .btns-main { flex-direction: column; }
+    #quiz, #result { width: auto; flex: 1; min-width: 200px; }
+    .note-btn { width: 42px; height: 42px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>Circle of Fifths</h1>
+
+  <div id="circle-wrap">
+    <svg id="cof" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="btns-main" id="main-btns">
+    <button class="btn sharp" onclick="startQuiz('sharp')">Sharps #</button>
+    <button class="btn flat"  onclick="startQuiz('flat')">Flats b</button>
+    <button class="btn rnd"   onclick="startQuiz('random')">Random</button>
+  </div>
+
+  <div id="quiz">
+    <div id="key-label"></div>
+    <div id="mode-label"></div>
+    <div id="note-btns"></div>
+    <button id="done-btn" onclick="checkAnswer()">Check answer</button>
+    <div id="result">
+      <div id="verdict"></div>
+      <div id="scale-display"></div>
+      <button id="try-btn" onclick="resetQuiz()">Try again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NOTES = ['A','B','C','D','E','F','G'];
+
+const SCALES = {
+  'G':  {type:'sharp', altered:['F']},
+  'D':  {type:'sharp', altered:['F','C']},
+  'A':  {type:'sharp', altered:['F','C','G']},
+  'E':  {type:'sharp', altered:['F','C','G','D']},
+  'B':  {type:'sharp', altered:['F','C','G','D','A']},
+  'F#': {type:'sharp', altered:['F','C','G','D','A','E']},
+  'C#': {type:'sharp', altered:['F','C','G','D','A','E','B']},
+  'F':  {type:'flat',  altered:['B']},
+  'Bb': {type:'flat',  altered:['B','E']},
+  'Eb': {type:'flat',  altered:['B','E','A']},
+  'Ab': {type:'flat',  altered:['B','E','A','D']},
+  'Db': {type:'flat',  altered:['B','E','A','D','G']},
+  'Gb': {type:'flat',  altered:['B','E','A','D','G','C']},
+  'Cb': {type:'flat',  altered:['B','E','A','D','G','C','F']},
+  'C':  {type:'none',  altered:[]}
+};
+
+const FULL_SCALES = {
+  'C':  ['C','D','E','F','G','A','B'],
+  'G':  ['G','A','B','C','D','E','F#'],
+  'D':  ['D','E','F#','G','A','B','C#'],
+  'A':  ['A','B','C#','D','E','F#','G#'],
+  'E':  ['E','F#','G#','A','B','C#','D#'],
+  'B':  ['B','C#','D#','E','F#','G#','A#'],
+  'F#': ['F#','G#','A#','B','C#','D#','E#'],
+  'C#': ['C#','D#','E#','F#','G#','A#','B#'],
+  'F':  ['F','G','A','Bb','C','D','E'],
+  'Bb': ['Bb','C','D','Eb','F','G','A'],
+  'Eb': ['Eb','F','G','Ab','Bb','C','D'],
+  'Ab': ['Ab','Bb','C','Db','Eb','F','G'],
+  'Db': ['Db','Eb','F','Gb','Ab','Bb','C'],
+  'Gb': ['Gb','Ab','Bb','Cb','Db','Eb','F'],
+  'Cb': ['Cb','Db','Eb','Fb','Gb','Ab','Bb']
+};
+
+const CIRCLE_ORDER = ['C','G','D','A','E','B','F#','C#','Gb','Db','Ab','Eb','Bb','F'];
+const SHARP_KEYS = ['G','D','A','E','B','F#','C#'];
+const FLAT_KEYS  = ['F','Bb','Eb','Ab','Db','Gb','Cb'];
+
+let currentKey = null, currentMode = null;
+
+function sid(k){ return 'seg-'+k.replace('#','S').replace('b','B'); }
+function tid(k){ return 'txt-'+k.replace('#','S').replace('b','B'); }
+
+function buildCircle(){
+  const svg = document.getElementById('cof');
+  const cx=150, cy=150, ro=130, ri=82;
+  const n = CIRCLE_ORDER.length;
+  let h = '';
+
+  h += `<circle cx="${cx}" cy="${cy}" r="${ro+2}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+  h += `<circle cx="${cx}" cy="${cy}" r="${ri-2}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+
+  for(let i=0;i<n;i++){
+    const k = CIRCLE_ORDER[i];
+    const info = SCALES[k];
+    const a  = (i/n)*2*Math.PI - Math.PI/2;
+    const a1 = ((i-.5)/n)*2*Math.PI - Math.PI/2;
+    const a2 = ((i+.5)/n)*2*Math.PI - Math.PI/2;
+
+    const x1=cx+ro*Math.cos(a1), y1=cy+ro*Math.sin(a1);
+    const x2=cx+ro*Math.cos(a2), y2=cy+ro*Math.sin(a2);
+    const x3=cx+ri*Math.cos(a2), y3=cy+ri*Math.sin(a2);
+    const x4=cx+ri*Math.cos(a1), y4=cy+ri*Math.sin(a1);
+
+    const baseCol = k==='C' ? 'rgba(255,255,255,0.04)'
+                  : info.type==='sharp' ? 'rgba(232,111,154,0.07)'
+                  : 'rgba(91,163,232,0.07)';
+    const textCol = k==='C' ? '#666'
+                  : info.type==='sharp' ? '#c47090'
+                  : '#5090c8';
+
+    h += `<path id="${sid(k)}" d="M${x1},${y1} A${ro},${ro} 0 0,1 ${x2},${y2} L${x3},${y3} A${ri},${ri} 0 0,0 ${x4},${y4} Z" fill="${baseCol}" stroke="rgba(255,255,255,0.07)" stroke-width="0.5" class="seg"/>`;
+
+    const tx = cx + ((ro+ri)/2)*Math.cos(a);
+    const ty = cy + ((ro+ri)/2)*Math.sin(a);
+    const fs = k.length > 1 ? 11 : 12.5;
+    h += `<text id="${tid(k)}" x="${tx}" y="${ty}" text-anchor="middle" dominant-baseline="central" font-size="${fs}" fill="${textCol}" class="key-label" font-family="Georgia,serif">${k}</text>`;
+  }
+
+  svg.innerHTML = h;
+}
+
+function highlightKey(key){
+  CIRCLE_ORDER.forEach(k=>{
+    const info = SCALES[k];
+    const seg = document.getElementById(sid(k));
+    const txt = document.getElementById(tid(k));
+    const baseCol = k==='C' ? 'rgba(255,255,255,0.04)'
+                  : info.type==='sharp' ? 'rgba(232,111,154,0.07)'
+                  : 'rgba(91,163,232,0.07)';
+    const textCol = k==='C' ? '#666'
+                  : info.type==='sharp' ? '#c47090'
+                  : '#5090c8';
+    if(seg) seg.setAttribute('fill', baseCol);
+    if(txt) { txt.setAttribute('fill', textCol); txt.setAttribute('font-weight','normal'); }
+  });
+
+  if(!key) return;
+  const info = SCALES[key];
+  const seg = document.getElementById(sid(key));
+  const txt = document.getElementById(tid(key));
+  const hiCol = key==='C' ? 'rgba(255,255,255,0.15)'
+              : info.type==='sharp' ? 'rgba(232,111,154,0.35)'
+              : 'rgba(91,163,232,0.35)';
+  const hiText = key==='C' ? '#ddd'
+               : info.type==='sharp' ? '#f0adc5'
+               : '#90c8f0';
+  if(seg) seg.setAttribute('fill', hiCol);
+  if(txt){ txt.setAttribute('fill', hiText); txt.setAttribute('font-weight','bold'); }
+}
+
+function startQuiz(mode){
+  let pool;
+  if(mode==='sharp') pool=SHARP_KEYS;
+  else if(mode==='flat') pool=FLAT_KEYS;
+  else pool=[...SHARP_KEYS,...FLAT_KEYS];
+  currentKey = pool[Math.floor(Math.random()*pool.length)];
+  currentMode = SCALES[currentKey].type;
+
+  highlightKey(currentKey);
+  document.getElementById('key-label').textContent = currentKey + ' Major';
+  document.getElementById('mode-label').textContent = currentMode==='sharp'
+    ? 'Select the notes that get a sharp (#)'
+    : 'Select the notes that get a flat (b)';
+
+  const nb = document.getElementById('note-btns');
+  nb.innerHTML='';
+  NOTES.forEach(n=>{
+    const b = document.createElement('button');
+    b.className = 'note-btn';
+    b.textContent = n;
+    b.dataset.note = n;
+    b.onclick = () => {
+      b.classList.toggle('selected');
+      b.classList.toggle(currentMode+'-mode');
+    };
+    nb.appendChild(b);
+  });
+
+  document.getElementById('result').style.display='none';
+  document.getElementById('done-btn').style.display='inline-block';
+  document.getElementById('quiz').style.display='flex';
+  document.getElementById('main-btns').style.opacity='0.4';
+}
+
+function checkAnswer(){
+  const selected = [...document.querySelectorAll('.note-btn.selected')].map(b=>b.dataset.note).sort();
+  const correct  = [...SCALES[currentKey].altered].sort();
+  const ok = selected.length===correct.length && selected.every((v,i)=>v===correct[i]);
+
+  const verdict = document.getElementById('verdict');
+  verdict.textContent = ok ? 'Correct!' : 'Not quite!';
+  verdict.className = ok ? 'correct' : 'wrong';
+
+  const sd = document.getElementById('scale-display');
+  sd.innerHTML='';
+  FULL_SCALES[currentKey].forEach(note=>{
+    const div = document.createElement('div');
+    div.className='sn';
+    div.textContent=note;
+    const base = note.replace('#','').replace('b','');
+    if(SCALES[currentKey].altered.includes(base)){
+      div.classList.add('altered', currentMode);
+    }
+    sd.appendChild(div);
+  });
+
+  document.getElementById('done-btn').style.display='none';
+  document.getElementById('result').style.display='flex';
+}
+
+function resetQuiz(){
+  document.getElementById('quiz').style.display='none';
+  document.getElementById('result').style.display='none';
+  document.getElementById('main-btns').style.opacity='1';
+  highlightKey(null);
+}
+
+buildCircle();
+</script>
+</body>
+</html>
